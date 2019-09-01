@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'application'
     id 'com.github.johnrengelman.shadow' version '5.1.0'
+    id "org.sonarqube" version "2.7.1"
 }
 
 group 'com.vyng'
@@ -48,6 +49,12 @@ shadowJar {
   mergeServiceFiles {
     include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
   }
+}
+
+sonarqube {
+    properties {
+        properties["sonar.sources"] += "src/main/resources/webroot/"
+    }
 }
 
 test {
