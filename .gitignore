@@ -1,0 +1,16 @@
+.idea/
+.gradle/
+build/
+out/
+*.iml
+*.ipr
+*.iws
+.DS_Store
+.env
+src/main/conf/my-application-conf.json
+.classpath
+.project
+.settings/
+bin/
+.vscode/
+newrelic/logs/

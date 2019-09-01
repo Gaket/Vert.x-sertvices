@@ -1,12 +1,13 @@
 plugins {
     id 'java'
     id 'application'
+    id 'com.github.johnrengelman.shadow' version '5.1.0'
 }
 
 group 'com.vyng'
 version '0.1'
 
-sourceCompatibility = 1.8
+sourceCompatibility = 1.11
 
 repositories {
     jcenter()
@@ -15,9 +16,49 @@ repositories {
     }
 }
 
-dependencies {
-    compile "io.vertx:vertx-core:3.8.1"
+ext {
+  vertxVersion = '3.8.1'
+  junitJupiterEngineVersion = '5.4.0'
 }
 
-mainClassName = 'com.vyng.vertex.HelloWorld'
+dependencies {
+  implementation "io.vertx:vertx-web:$vertxVersion"
+  implementation "io.vertx:vertx-mongo-client:$vertxVersion"
+  implementation "io.vertx:vertx-redis-client:$vertxVersion"
+  implementation("com.squareup.okhttp3:okhttp:4.1.0")
+
+  testImplementation "io.vertx:vertx-junit5:$vertxVersion"
+  testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitJupiterEngineVersion"
+  testImplementation "org.junit.jupiter:junit-jupiter-api:$junitJupiterEngineVersion"
+}
+
+application {
+  mainClassName = 'io.vertx.core.Launcher'
+}
+
+def mainVerticleName = 'com.vyng.vertex.verticle.HttpServerVerticle'
+def watchForChange = 'src/**/*'
+def doOnChange = './gradlew classes'
+
+shadowJar {
+  classifier = 'fat'
+  manifest {
+    attributes 'Main-Verticle': mainVerticleName
+  }
+  mergeServiceFiles {
+    include 'META-INF/services/io.vertx.core.spi.VerticleFactory'
+  }
+}
+
+test {
+  useJUnitPlatform()
+  testLogging {
+    events 'PASSED', 'FAILED', 'SKIPPED'
+  }
+}
+
+run {
+  args = ['run', mainVerticleName, "--launcher-class=$mainClassName",  "-conf src/main/conf/my-application-conf.json", "--redeploy=$watchForChange", "--on-redeploy=$doOnChange"]
+}
+
 

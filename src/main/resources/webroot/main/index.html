@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Vyng back office</title>
+  <link rel="stylesheet" href="/static/main/style.css">
+</head>
+
+<body>
+  <div class="container">
+    <p> What do you want?</p>
+    <form action="/userinfo" method="get">
+      <input type="submit" value="Get user info from prod">
+    </form>
+    <form action="/removeuser" method="get">
+      <input type="submit" value="Remove user from dev">
+    </form>
+  </div>
+</body>
+
+</html>
