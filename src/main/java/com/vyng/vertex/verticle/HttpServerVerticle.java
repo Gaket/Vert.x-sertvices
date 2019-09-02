@@ -38,6 +38,7 @@ import static io.vertx.ext.auth.shiro.PropertiesProviderConstants.PROPERTIES_PRO
 public class HttpServerVerticle extends AbstractVerticle {
 
     private final static java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger("VertxHttpServer");
+    private static final String HEROKU_DATA_SOURCE = "heroku_data_source";
 
     private RemoveUserService removeUserService;
     private GetUserInfoService getUserInfoService;
@@ -49,17 +50,18 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     @Override
     public void start(Promise<Void> prom) {
-        MongoClient mongoClient = initMongoClient();
+        MongoClient prodMongoClient = initMongoClient();
+        MongoClient herokuMongoClient = initHerokuMongoClient();
         RedisClient redisClient = initRedisClient();
-        initServices(mongoClient, redisClient);
+        initServices(prodMongoClient, herokuMongoClient, redisClient);
 
         Router router = initRouter();
         createHttpServer(prom, router);
     }
 
-    private void initServices(MongoClient mongoClient, RedisClient redisClient) {
+    private void initServices(MongoClient mongoClient, MongoClient herokuMongoClient, RedisClient redisClient) {
         getUserInfoService = new GetUserInfoService(mongoClient, redisClient);
-        removeUserService = new RemoveUserService(mongoClient);
+        removeUserService = new RemoveUserService(herokuMongoClient);
     }
 
     @NotNull
@@ -92,7 +94,25 @@ public class HttpServerVerticle extends AbstractVerticle {
                 rc.next();
             }
         });
-        router.route("/info/:id").handler(this::getUser);
+        router.route("/info/:id")
+                .handler(rc -> {
+                    if (rc.user() == null) {
+                        rc.fail(401);
+                        return;
+                    }
+                    rc.user().isAuthorized("get_info", authResult -> {
+                        if (authResult.succeeded()) {
+                            if (authResult.result()) {
+                                rc.next();
+                            } else {
+                                rc.fail(403);
+                            }
+                        } else {
+                            rc.fail(authResult.cause());
+                        }
+                    });
+                })
+                .handler(this::getUser);
         // health check
         router.get("/health").handler(rc -> rc.response().end("OK"));
 
@@ -179,6 +199,12 @@ public class HttpServerVerticle extends AbstractVerticle {
         return MongoClient.createShared(vertx, mongoconfig);
     }
 
+    private MongoClient initHerokuMongoClient() {
+        String uri = Utils.getParam("MONGO_DB_HEROKU");
+        JsonObject mongoconfig = new JsonObject().put("connection_string", uri);
+        return MongoClient.createShared(vertx, mongoconfig, HEROKU_DATA_SOURCE);
+    }
+
     private RedisClient initRedisClient() {
         URI redis = URI.create(Utils.getParam("REDISCLOUD_URL"));
         RedisOptions redisOptions = new RedisOptions()
@@ -202,11 +228,12 @@ public class HttpServerVerticle extends AbstractVerticle {
         vertx.createHttpServer(options).requestHandler(router).listen(result -> {
             if (result.succeeded()) {
                 prom.complete();
+                LOGGER.info("Server started: http://localhost:" + portString);
             } else {
                 prom.fail(result.cause());
+                LOGGER.severe("Error on starting the server: " + result.cause());
             }
         });
-        LOGGER.info("Server started: http://localhost:" + portString);
     }
 
     private void getUser(RoutingContext rc) {
