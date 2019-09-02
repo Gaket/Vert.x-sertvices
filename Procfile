@@ -1,1 +1,1 @@
-web: java $JAVA_OPTS -Dhttp.port=$PORT -javaagent:newrelic/newrelic.jar -jar build/libs/Vertex-0.1-fat.jar
+web: java $JAVA_OPTS -Dhttp.port=$PORT -javaagent:newrelic/newrelic.jar -jar build/libs/Vertex-0.1-fat.jar -conf config/my-application-conf.json

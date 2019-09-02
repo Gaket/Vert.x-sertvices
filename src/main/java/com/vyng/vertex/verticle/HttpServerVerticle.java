@@ -12,15 +12,28 @@ import io.vertx.core.Promise;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.AuthProvider;
+import io.vertx.ext.auth.shiro.ShiroAuth;
+import io.vertx.ext.auth.shiro.ShiroAuthOptions;
+import io.vertx.ext.auth.shiro.ShiroAuthRealmType;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.StaticHandler;
+import io.vertx.ext.web.handler.*;
+import io.vertx.ext.web.sstore.LocalSessionStore;
 import io.vertx.redis.RedisClient;
 import io.vertx.redis.RedisOptions;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URI;
+
+import static io.vertx.ext.auth.shiro.PropertiesProviderConstants.PROPERTIES_PROPS_PATH_FIELD;
 
 public class HttpServerVerticle extends AbstractVerticle {
 
@@ -31,7 +44,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     public static void main(final String[] args) {
         Launcher.executeCommand("run", HttpServerVerticle.class.getName(),
-                "-conf src/main/conf/my-application-conf.json");
+                "-conf config/my-application-conf.json");
     }
 
     @Override
@@ -53,16 +66,111 @@ public class HttpServerVerticle extends AbstractVerticle {
     private Router initRouter() {
         Router router = Router.router(vertx);
 
-        router.route("/users/:phone").handler(this::deleteUser);
+        AuthProvider authProvider = initAuthProvider(router);
+
+        router.route("/users/:phone").handler(rc -> {
+            if (rc.user() == null) {
+                rc.fail(401);
+                return;
+            }
+            rc.user().isAuthorized("remove_users", authResult -> {
+                if (authResult.succeeded()) {
+                    if (authResult.result()) {
+                        rc.next();
+                    } else {
+                        rc.fail(403);
+                    }
+                } else {
+                    rc.fail(authResult.cause());
+                }
+            });
+        }).handler(this::deleteUser).failureHandler(rc -> {
+            // We need to manually handle 401 here, otherwise, an error on trying to redirect DELETE method happens
+            if (rc.statusCode() == 401) {
+                rc.response().setStatusCode(401).end("Please, login");
+            } else {
+                rc.next();
+            }
+        });
         router.route("/info/:id").handler(this::getUser);
         // health check
         router.get("/health").handler(rc -> rc.response().end("OK"));
+
+        router.route("/userinfo").handler(RedirectAuthHandler.create(authProvider, "/login/"));
+
         // links to pages
-        router.get("/userinfo").handler(StaticHandler.create("webroot/getuser"));
+        router.get("/userinfo").handler(StaticHandler.create("webroot/getuser").setCachingEnabled(false));
+
+        // Handles the actual login
+        router.route("/loginhandler")
+                .handler(BodyHandler.create())
+                .handler(FormLoginHandler.create(authProvider).setDirectLoggedInOKURL("/"));
+
+        // Implement logout
+        router.route("/logout").handler(rc -> {
+            rc.clearUser();
+            // Redirect back to the index page
+            rc.response().putHeader("location", "/").setStatusCode(302).end();
+        });
+
+        router.get("/login").handler(StaticHandler.create("webroot/login"));
         router.get("/removeuser").handler(StaticHandler.create("webroot/removeuser"));
         router.get("/").handler(StaticHandler.create("webroot/main"));
         router.route("/static/*").handler(StaticHandler.create());
+
+        router.errorHandler(401, rc -> {
+            rc.response().putHeader("location", "/login").setStatusCode(302).end();
+        });
+
+        router.errorHandler(500, ar -> {
+            LOGGER.severe("500 error: Request: " + ar.request().path() +
+                    ", params: " + ar.request().params() +
+                    ", user: " + ar.user());
+            // According to docs, we must not call ar.next() here
+        });
+
         return router;
+    }
+
+    @NotNull
+    private AuthProvider initAuthProvider(Router router) {
+        initUserAuthConfig();
+
+        // Simple auth service which uses a properties file for user/role info
+        ShiroAuthOptions options = new ShiroAuthOptions()
+                .setType(ShiroAuthRealmType.PROPERTIES)
+                .setConfig(new JsonObject().put(PROPERTIES_PROPS_PATH_FIELD, Utils.getParam("USER_CONFIG_PATH")));
+        AuthProvider authProvider = ShiroAuth.create(vertx, options);
+        router.route().handler(SessionHandler.create(LocalSessionStore.create(vertx)).setAuthProvider(authProvider));
+        return authProvider;
+    }
+
+    /**
+     * We don't want to expose user config, so getting it via env variables
+     */
+    private void initUserAuthConfig() {
+        File configFile = new File(Utils.getParam("USER_CONFIG_PATH"));
+        if (!configFile.exists()) {
+            try (FileOutputStream fos = new FileOutputStream(configFile)) {
+
+                String downloadUrl = Utils.getParam("USER_CONFIG_URL");
+                OkHttpClient client = new OkHttpClient();
+                Request request = new Request.Builder().url(downloadUrl).build();
+                Response response = client.newCall(request).execute();
+                if (!response.isSuccessful() || response.body() == null) {
+                    throw new IOException("Failed to download file: " + response);
+                }
+
+                LOGGER.info("User config downloaded");
+                fos.write(response.body().bytes());
+                fos.close();
+                LOGGER.info("Config written to file");
+            } catch (IOException e) {
+                LOGGER.severe("Could not download user config: " + e);
+            }
+        } else {
+            LOGGER.info("User config file already exists");
+        }
     }
 
     private MongoClient initMongoClient() {
@@ -105,6 +213,7 @@ public class HttpServerVerticle extends AbstractVerticle {
         final String id = rc.request().getParam("id");
         final String remoteIp = rc.request().remoteAddress().host();
         Future<JsonObject> promise = getUserInfoService.getUserInfo(id, remoteIp);
+
         promise.setHandler(ar -> {
             if (ar.succeeded()) {
                 LOGGER.info("Got info about the user: " + id);
@@ -136,5 +245,4 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 }
 
-// TODO: require a token to remove a number
 // TODO: log removals and users who did it

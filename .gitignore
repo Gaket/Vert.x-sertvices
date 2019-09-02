@@ -14,3 +14,6 @@ src/main/conf/my-application-conf.json
 bin/
 .vscode/
 newrelic/logs/
+/src/main/resources/vertx-users.properties
+/config/my-application-conf.json
+/config/vertx-users.properties

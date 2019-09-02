@@ -1,8 +1,8 @@
 plugins {
-    id 'java'
-    id 'application'
-    id 'com.github.johnrengelman.shadow' version '5.1.0'
-    id "org.sonarqube" version "2.7.1"
+  id 'java'
+  id 'application'
+  id 'com.github.johnrengelman.shadow' version '5.1.0'
+  id "org.sonarqube" version "2.7.1"
 }
 
 group 'com.vyng'
@@ -11,10 +11,10 @@ version '0.1'
 sourceCompatibility = 1.11
 
 repositories {
-    jcenter()
-    maven {
-        url "https://oss.sonatype.org/content/repositories/iovertx-3844/"
-    }
+  jcenter()
+  maven {
+    url "https://oss.sonatype.org/content/repositories/iovertx-3844/"
+  }
 }
 
 ext {
@@ -26,6 +26,10 @@ dependencies {
   implementation "io.vertx:vertx-web:$vertxVersion"
   implementation "io.vertx:vertx-mongo-client:$vertxVersion"
   implementation "io.vertx:vertx-redis-client:$vertxVersion"
+  implementation "io.vertx:vertx-auth-common:$vertxVersion"
+  implementation "io.vertx:vertx-auth-shiro:$vertxVersion"
+  implementation "org.slf4j:slf4j-api:1.7.21"
+  implementation "org.slf4j:slf4j-jdk14:1.7.21"
   implementation("com.squareup.okhttp3:okhttp:4.1.0")
 
   testImplementation "io.vertx:vertx-junit5:$vertxVersion"
@@ -52,9 +56,9 @@ shadowJar {
 }
 
 sonarqube {
-    properties {
-        properties["sonar.sources"] += "src/main/resources/webroot/"
-    }
+  properties {
+    properties["sonar.sources"] += "src/main/resources/webroot/"
+  }
 }
 
 test {
@@ -65,7 +69,7 @@ test {
 }
 
 run {
-  args = ['run', mainVerticleName, "--launcher-class=$mainClassName",  "-conf src/main/conf/my-application-conf.json", "--redeploy=$watchForChange", "--on-redeploy=$doOnChange"]
+  args = ['run', mainVerticleName, "--launcher-class=$mainClassName", "-conf config/my-application-conf.json", "--redeploy=$watchForChange", "--on-redeploy=$doOnChange"]
 }
 
 

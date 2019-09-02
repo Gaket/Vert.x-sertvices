@@ -1,10 +1,15 @@
 function displayStatus(status) {
   if (status == 404) {
     showToast("User was not found")
+  } else if (status == 401) {
+    showToast("Please, login... Redirecting in 2 seconds")
+    window.setTimeout(moveToLogin, 2000);
   } else if (status == 204) {
     showToast("User succesfully removed")
   } else if (status == 403) {
     showToast("Only qa team users can be removed")
+  } else {
+    showToast("Unexpected error")
   }
 }
 
@@ -13,6 +18,10 @@ function showToast(text) {
   toast.classList.remove("off");
 
   window.setTimeout(hideToast, 5000);
+}
+
+function moveToLogin() {
+  window.location.href = "/login";
 }
 
 function hideToast() {
