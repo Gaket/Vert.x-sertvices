@@ -1,10 +1,8 @@
-const endpoint = '/info/';
-
 const users = [];
 
 function addUser(user, users) {
   console.log(`Fetching user: ${user}`)
-  fetch(endpoint + user)
+  fetch(`/users/${user}/info`)
     .then(response => {
       if (!response.ok) {
         throw Error(response.statusText);

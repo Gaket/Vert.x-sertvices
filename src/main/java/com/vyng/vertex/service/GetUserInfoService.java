@@ -10,6 +10,7 @@ import io.vertx.core.Promise;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.redis.RedisClient;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -40,31 +41,38 @@ public class GetUserInfoService {
             return Future.failedFuture("Unexpected id length");
         }
 
+        // Add rate limit on total queries to the get user resource
         Future<Boolean> totalSuccess =
                 getTotalRequestLimitFuture(KEY_GET_TOTAL_COUNT, MAX_TOTAL_REQUESTS, "Max daily total info request count reached");
 
+        // Add rate limit on queries to the get user resource from one ip
         Future<Boolean> userSuccess =
                 getTotalRequestLimitFuture(KEY_GET_USER_COUNT + remoteIp, MAX_USER_REQUESTS, "Max daily user info request count reached");
 
         return CompositeFuture.all(totalSuccess, userSuccess)
-                .compose(__ -> {
-                    Promise<JsonObject> mongoPromise = Promise.promise();
-                    mongoClient.findOne("users",
-                            new JsonObject().put("_id", new JsonObject().put("$oid", id)),
-                            new JsonObject().put("_id", 1).put("phoneNumber", 1).put("createdAt", 1), mongoPromise);
-                    return mongoPromise.future();
-                })
-                .map(entry -> {
-                    if (entry == null) {
-                        throw new NotFoundException("Object with the id was not found: " + id);
-                    }
+                .compose(__ -> getUserById(id))
+                .map(entry -> flattenJson(id, entry));
+    }
 
-                    String id1 = entry.getJsonObject("_id").getString("$oid");
-                    entry.put("_id", id1);
-                    String createdAt = entry.getJsonObject("createdAt").getString("$date");
-                    entry.put("createdAt", createdAt);
-                    return entry;
-                });
+    @NotNull
+    private JsonObject flattenJson(String id, JsonObject entry) {
+        if (entry == null) {
+            throw new NotFoundException("Object with the id was not found: " + id);
+        }
+
+        String id1 = entry.getJsonObject("_id").getString("$oid");
+        entry.put("_id", id1);
+        String createdAt = entry.getJsonObject("createdAt").getString("$date");
+        entry.put("createdAt", createdAt);
+        return entry;
+    }
+
+    private Future<JsonObject> getUserById(String id) {
+        Promise<JsonObject> mongoPromise = Promise.promise();
+        mongoClient.findOne("users",
+                new JsonObject().put("_id", new JsonObject().put("$oid", id)),
+                new JsonObject().put("_id", 1).put("phoneNumber", 1).put("createdAt", 1), mongoPromise);
+        return mongoPromise.future();
     }
 
     private Future<Boolean> getTotalRequestLimitFuture(String key, int maxRequests, String error) {

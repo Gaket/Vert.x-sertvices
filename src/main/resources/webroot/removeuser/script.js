@@ -49,7 +49,7 @@ function removeNumber() {
   }
 
   const number = "+" + searchInput.value.replace(/\D/g,'');
-  xhttp.open("DELETE", "/users/" + number, true);
+  xhttp.open("DELETE", "/users/phone/" + number, true);
   xhttp.send();
 }
 
