@@ -23,9 +23,10 @@ public class RemoveUserService {
         this.mongoClient = mongoClient;
     }
 
+    // This is the first type of serving routing, that passes routingContext inside.
+    // That was a bad experiment, don't do it in prod. GetUserInfoService has better example with Futures
     public void deleteUser(String phone, RoutingContext routingContext) {
-        String msg = "Deleting a user: " + phone;
-        LOGGER.info(msg);
+        LOGGER.info("Deleting a user: " + phone);
 
         allowedToDelete(phone)
                 .setHandler(asyncresult -> {

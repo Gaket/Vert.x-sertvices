@@ -70,86 +70,89 @@ public class HttpServerVerticle extends AbstractVerticle {
 
         AuthProvider authProvider = initAuthProvider(router);
 
-        router.route("/users/:phone").handler(rc -> {
-            if (rc.user() == null) {
-                rc.fail(401);
-                return;
-            }
-            rc.user().isAuthorized("remove_users", authResult -> {
-                if (authResult.succeeded()) {
-                    if (authResult.result()) {
-                        rc.next();
-                    } else {
-                        rc.fail(403);
-                    }
-                } else {
-                    rc.fail(authResult.cause());
-                }
-            });
-        }).handler(this::deleteUser).failureHandler(rc -> {
-            // We need to manually handle 401 here, otherwise, an error on trying to redirect DELETE method happens
-            if (rc.statusCode() == 401) {
-                rc.response().setStatusCode(401).end("Please, login");
-            } else {
-                rc.next();
-            }
-        });
-        router.route("/info/:id")
-                .handler(rc -> {
-                    if (rc.user() == null) {
-                        rc.fail(401);
-                        return;
-                    }
-                    rc.user().isAuthorized("get_info", authResult -> {
-                        if (authResult.succeeded()) {
-                            if (authResult.result()) {
-                                rc.next();
-                            } else {
-                                rc.fail(403);
-                            }
-                        } else {
-                            rc.fail(authResult.cause());
-                        }
-                    });
-                })
+        // Main services endpoints
+
+        router.route("/users/:id/info")
+                .handler(rc -> checkAuth(rc, "get_info"))
                 .handler(this::getUser);
-        // health check
+
+        // We need to manually handle 401 here, otherwise, an error on trying to redirect DELETE method happens
+        router.delete("/users/phone/:phone")
+                .handler(rc -> checkAuth(rc, "remove_users"))
+                .handler(this::deleteUser)
+                .failureHandler(this::handle401);
+
+        // Health check for monitoring tools
         router.get("/health").handler(rc -> rc.response().end("OK"));
 
-        router.route("/userinfo").handler(RedirectAuthHandler.create(authProvider, "/login/"));
-
-        // links to pages
-        router.get("/userinfo").handler(StaticHandler.create("webroot/getuser").setCachingEnabled(false));
-
-        // Handles the actual login
+        // Handles auth
         router.route("/loginhandler")
                 .handler(BodyHandler.create())
                 .handler(FormLoginHandler.create(authProvider).setDirectLoggedInOKURL("/"));
 
-        // Implement logout
-        router.route("/logout").handler(rc -> {
-            rc.clearUser();
-            // Redirect back to the index page
-            rc.response().putHeader("location", "/").setStatusCode(302).end();
-        });
+        router.route("/logout").handler(this::logout);
 
-        router.get("/login").handler(StaticHandler.create("webroot/login"));
-        router.get("/removeuser").handler(StaticHandler.create("webroot/removeuser"));
+        // Links to static pages
+        router.get("/login").handler(StaticHandler.create("webroot/login").setCachingEnabled(false));
+        // This one shows that authentication required to access the page
+        router.get("/userinfo")
+                .handler(RedirectAuthHandler.create(authProvider, "/login/"))
+                .handler(StaticHandler.create("webroot/getuser").setCachingEnabled(false));
+        router.get("/removeuser")
+                .handler(RedirectAuthHandler.create(authProvider, "/login/"))
+                .handler(StaticHandler.create("webroot/removeuser").setCachingEnabled(false));
+        router.get("/static/*").handler(StaticHandler.create());
         router.get("/").handler(StaticHandler.create("webroot/main"));
-        router.route("/static/*").handler(StaticHandler.create());
 
-        router.errorHandler(401, rc -> {
-            rc.response().putHeader("location", "/login").setStatusCode(302).end();
-        });
-
-        router.errorHandler(500, ar -> {
-            LOGGER.severe("500 error: Request: " + ar.request().path() +
-                    ", params: " + ar.request().params() +
-                    ", user: " + ar.user());
-            // According to docs, we must not call ar.next() here
-        });
+        // Common errors handling
+        router.errorHandler(401, this::redirectToLogin);
+        router.errorHandler(500, this::logSevere);
 
         return router;
+    }
+
+    private void logout(RoutingContext rc) {
+        rc.clearUser();
+        // Redirect back to the index page
+        rc.response().putHeader("location", "/").setStatusCode(302).end();
+    }
+
+    private void logSevere(RoutingContext ar) {
+        LOGGER.severe("500 error: Request: " + ar.request().path() +
+                ", params: " + ar.request().params() +
+                ", user: " + ar.user());
+        // According to docs, we must not call ar.next() here
+    }
+
+    private void redirectToLogin(RoutingContext rc) {
+        rc.response().putHeader("location", "/login").setStatusCode(302).end();
+    }
+
+    private void handle401(RoutingContext rc) {
+        // We need to manually handle 401 here, otherwise, an error on trying to redirect DELETE method happens
+        if (rc.statusCode() == 401) {
+            rc.response().setStatusCode(401).end("Please, login");
+        } else {
+            rc.next();
+        }
+    }
+
+    private void checkAuth(RoutingContext rc, String authority) {
+        if (rc.user() == null) {
+            rc.fail(401);
+            return;
+        }
+        rc.user().isAuthorized(authority, authResult -> {
+            if (authResult.succeeded()) {
+                if (authResult.result()) {
+                    rc.next();
+                } else {
+                    rc.fail(403);
+                }
+            } else {
+                rc.fail(authResult.cause());
+            }
+        });
     }
 
     @NotNull
