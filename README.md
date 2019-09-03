@@ -1,0 +1,2 @@
+# Vert.x-services
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/168425279c674e8fb8f03b1c8437451d)](https://app.codacy.com/app/Gaket/Vert.x-services?utm_source=github.com&utm_medium=referral&utm_content=Gaket/Vert.x-services&utm_campaign=Badge_Grade_Dashboard)
