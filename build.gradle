@@ -58,6 +58,9 @@ shadowJar {
 sonarqube {
   properties {
     properties["sonar.sources"] += "src/main/resources/webroot/"
+    properties["sonar.organization"] = "gaket"
+    properties["sonar.host.url"] = "https://sonarcloud.io"
+    properties["sonar.projectKey"] = "Gaket_Vert.x-services"
   }
 }
 
