@@ -37,7 +37,7 @@ import static io.vertx.ext.auth.shiro.PropertiesProviderConstants.PROPERTIES_PRO
 
 public class HttpServerVerticle extends AbstractVerticle {
 
-    private final static java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger("VertxHttpServer");
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger("VertxHttpServer");
     private static final String HEROKU_DATA_SOURCE = "heroku_data_source";
 
     private RemoveUserService removeUserService;
@@ -119,7 +119,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     private void logSevere(RoutingContext ar) {
         LOGGER.severe("500 error: Request: " + sanitizeParam(ar.request().path()) +
-                ", params: " + ar.request().params() +
+                ", params: " + sanitizeParam(ar.request().params().toString()) +
                 ", user: " + ar.user());
         // According to docs, we must not call ar.next() here
     }
@@ -138,10 +138,9 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 
     private void checkAuth(RoutingContext rc, String authority) {
-        System.out.println(rc.user().toString()); // TODO: that's static analysis test, remove later
         if (rc.user() == null) {
             rc.fail(401);
-//            return; TODO: that's static analysis test, return back later
+            return;
         }
         rc.user().isAuthorized(authority, authResult -> {
             if (authResult.succeeded()) {
@@ -187,7 +186,6 @@ public class HttpServerVerticle extends AbstractVerticle {
 
                 LOGGER.info("User config downloaded");
                 fos.write(response.body().bytes());
-                fos.close();
                 LOGGER.info("Config written to file");
             } catch (IOException e) {
                 LOGGER.severe("Could not download user config: " + e);
@@ -241,13 +239,14 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 
     private void getUser(RoutingContext rc) {
-        final String id = rc.request().getParam("id"); // TODO sanitize the param. Left here for static tool testing purposes
+        final String id = rc.request().getParam("id");
+        final String sanitizedId = sanitizeParam(id);
         final String remoteIp = rc.request().remoteAddress().host();
-        Future<JsonObject> promise = getUserInfoService.getUserInfo(id, remoteIp);
+        Future<JsonObject> promise = getUserInfoService.getUserInfo(sanitizedId, remoteIp);
 
         promise.setHandler(ar -> {
             if (ar.succeeded()) {
-                LOGGER.info("Got info about the user: " + id);
+                LOGGER.info("Got info about the user: " + sanitizedId);
                 rc.response().setStatusCode(200)
                         .putHeader("content-type", "application/json; charset=utf-8")
                         .end(Json.encodePrettily(ar.result()));
@@ -278,7 +277,7 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 
     private String sanitizeParam(String param) {
-        return  param.replaceAll("[\n\r\t]", "_");
+        return param.replaceAll("[\n\r\t]", "_");
     }
 }
 

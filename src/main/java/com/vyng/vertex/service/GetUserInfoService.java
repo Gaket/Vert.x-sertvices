@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 
 public class GetUserInfoService {
 
-    private final static Logger LOGGER = java.util.logging.Logger.getLogger("GetUserInfoService");
+    private static final Logger LOGGER = java.util.logging.Logger.getLogger("GetUserInfoService");
 
     private static final int MAX_USER_REQUESTS = Integer.parseInt(Utils.getParam("MAX_USER_REQUESTS"));
     private static final int MAX_TOTAL_REQUESTS = Integer.parseInt(Utils.getParam("MAX_TOTAL_REQUESTS"));
@@ -37,6 +37,7 @@ public class GetUserInfoService {
     }
 
     public Future<JsonObject> getUserInfo(String id, String remoteIp) {
+        LOGGER.info("Getting user info for: " + id);
         if (id.length() != MONGO_ID_LENGTH) {
             return Future.failedFuture("Unexpected id length");
         }

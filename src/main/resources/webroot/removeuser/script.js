@@ -12,7 +12,7 @@ function moveToLogin() {
 }
 
 function showToast(text) {
-  toast.innerHTML = `${text}`;
+  toast.textContent = text;
   toast.classList.remove("off");
 
   window.setTimeout(hideToast, 5000);
