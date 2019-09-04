@@ -1,3 +1,23 @@
+const searchInput = document.querySelector('.search');
+const deleteButton = document.querySelector('.btn');
+const toast = document.querySelector('.toast');
+
+function hideToast() {
+  toast.classList.add("off");
+  toast.innerHTML = ".";
+}
+
+function moveToLogin() {
+  window.location.href = "/login";
+}
+
+function showToast(text) {
+  toast.innerHTML = `${text}`;
+  toast.classList.remove("off");
+
+  window.setTimeout(hideToast, 5000);
+}
+
 function displayStatus(status) {
   if (status == 404) {
     showToast("User was not found")
@@ -11,22 +31,6 @@ function displayStatus(status) {
   } else {
     showToast("Unexpected error")
   }
-}
-
-function showToast(text) {
-  toast.innerHTML = text;
-  toast.classList.remove("off");
-
-  window.setTimeout(hideToast, 5000);
-}
-
-function moveToLogin() {
-  window.location.href = "/login";
-}
-
-function hideToast() {
-  toast.classList.add("off");
-  toast.innerHTML = ".";
 }
 
 function removeNumber() {
@@ -52,10 +56,6 @@ function removeNumber() {
   xhttp.open("DELETE", "/users/phone/" + number, true);
   xhttp.send();
 }
-
-const searchInput = document.querySelector('.search');
-const deleteButton = document.querySelector('.btn');
-const toast = document.querySelector('.toast');
 
 searchInput.onkeypress = function (e) {
   if (!e) e = window.event;

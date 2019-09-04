@@ -1,45 +1,11 @@
 const users = [];
 
-function addUser(user, users) {
-  console.log(`Fetching user: ${user}`)
-  fetch(`/users/${user}/info`)
-    .then(response => {
-      if (!response.ok) {
-        throw Error(response.statusText);
-      } else {
-        return response;
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      console.log(`User arrived: ${data}`);
-      users.unshift(data);
-      displayUsers();
-    })
-    .catch(displayError)
-    .finally(() => searchInput.disabled = false);
-}
-
-function displayError(error) {
-  console.log(error);
-  displayUsersWithError(error.message);
-}
+const searchInput = document.querySelector('.search');
+const suggestions = document.querySelector('.users');
 
 function formatDate(x) {
   let date = new Date(x);
   return date.toLocaleDateString();
-}
-
-function displayLoading() {
-  displayUsersAnd(true, null)
-}
-
-function displayUsers() {
-  displayUsersAnd(false, null)
-}
-
-function displayUsersWithError(errorMsg) {
-  displayUsersAnd(false, errorMsg);
 }
 
 function displayUsersAnd(isLoading, errorMsg) {
@@ -75,13 +41,46 @@ function displayUsersAnd(isLoading, errorMsg) {
   suggestions.innerHTML = html;
 }
 
-const searchInput = document.querySelector('.search');
-const suggestions = document.querySelector('.users');
+function displayUsersWithError(errorMsg) {
+  displayUsersAnd(false, errorMsg);
+}
+
+function displayError(error) {
+  console.log(error);
+  displayUsersWithError(error.message);
+}
+
+function displayUsers() {
+  displayUsersAnd(false, null)
+}
+function displayLoading() {
+  displayUsersAnd(true, null)
+}
+
+function addUser(user, users) {
+  console.log(`Fetching user: ${user}`)
+  fetch(`/users/${user}/info`)
+    .then(response => {
+      if (!response.ok) {
+        throw Error(response.statusText);
+      } else {
+        return response;
+      }
+    })
+    .then(response => response.json())Í
+    .then(data => {
+      console.log(`User arrived: ${data}`);
+      users.unshift(data);
+      displayUsers();
+    })
+    .catch(displayError)
+    .finally(() => searchInput.disabledÍ = false);
+}
 
 searchInput.onkeypress = function (e) {
   if (!e) e = window.event;
   var keyCode = e.keyCode || e.which;
-  if (keyCode == '13') {
+  if (keyCode === '13') {
     searchInput.disabled = true;
     displayLoading();
     addUser(this.value, users);

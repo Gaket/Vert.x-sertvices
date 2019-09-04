@@ -118,7 +118,7 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 
     private void logSevere(RoutingContext ar) {
-        LOGGER.severe("500 error: Request: " + ar.request().path() +
+        LOGGER.severe("500 error: Request: " + sanitizeParam(ar.request().path()) +
                 ", params: " + ar.request().params() +
                 ", user: " + ar.user());
         // According to docs, we must not call ar.next() here
@@ -138,9 +138,10 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 
     private void checkAuth(RoutingContext rc, String authority) {
+        System.out.println(rc.user().toString()); // TODO: that's static analysis test, remove later
         if (rc.user() == null) {
             rc.fail(401);
-            return;
+//            return; TODO: that's static analysis test, return back later
         }
         rc.user().isAuthorized(authority, authResult -> {
             if (authResult.succeeded()) {
@@ -240,7 +241,7 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 
     private void getUser(RoutingContext rc) {
-        final String id = rc.request().getParam("id");
+        final String id = rc.request().getParam("id"); // TODO sanitize the param. Left here for static tool testing purposes
         final String remoteIp = rc.request().remoteAddress().host();
         Future<JsonObject> promise = getUserInfoService.getUserInfo(id, remoteIp);
 
@@ -271,7 +272,13 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 
     private void deleteUser(RoutingContext routingContext) {
-        removeUserService.deleteUser(routingContext.request().getParam("phone"), routingContext);
+        String phone = routingContext.request().getParam("phone");
+        String sanitizedPhone = sanitizeParam(phone);
+        removeUserService.deleteUser(sanitizedPhone, routingContext);
+    }
+
+    private String sanitizeParam(String param) {
+        return  param.replaceAll("[\n\r\t]", "_");
     }
 }
 
