@@ -37,7 +37,7 @@ import static io.vertx.ext.auth.shiro.PropertiesProviderConstants.PROPERTIES_PRO
 
 public class HttpServerVerticle extends AbstractVerticle {
 
-    private final static java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger("VertxHttpServer");
+    private static final java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger("VertxHttpServer");
     private static final String HEROKU_DATA_SOURCE = "heroku_data_source";
 
     private RemoveUserService removeUserService;
@@ -118,8 +118,8 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 
     private void logSevere(RoutingContext ar) {
-        LOGGER.severe("500 error: Request: " + ar.request().path() +
-                ", params: " + ar.request().params() +
+        LOGGER.severe("500 error: Request: " + sanitizeParam(ar.request().path()) +
+                ", params: " + sanitizeParam(ar.request().params().toString()) +
                 ", user: " + ar.user());
         // According to docs, we must not call ar.next() here
     }
@@ -186,7 +186,6 @@ public class HttpServerVerticle extends AbstractVerticle {
 
                 LOGGER.info("User config downloaded");
                 fos.write(response.body().bytes());
-                fos.close();
                 LOGGER.info("Config written to file");
             } catch (IOException e) {
                 LOGGER.severe("Could not download user config: " + e);
@@ -241,12 +240,13 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     private void getUser(RoutingContext rc) {
         final String id = rc.request().getParam("id");
+        final String sanitizedId = sanitizeParam(id);
         final String remoteIp = rc.request().remoteAddress().host();
-        Future<JsonObject> promise = getUserInfoService.getUserInfo(id, remoteIp);
+        Future<JsonObject> promise = getUserInfoService.getUserInfo(sanitizedId, remoteIp);
 
         promise.setHandler(ar -> {
             if (ar.succeeded()) {
-                LOGGER.info("Got info about the user: " + id);
+                LOGGER.info("Got info about the user: " + sanitizedId);
                 rc.response().setStatusCode(200)
                         .putHeader("content-type", "application/json; charset=utf-8")
                         .end(Json.encodePrettily(ar.result()));
@@ -271,7 +271,13 @@ public class HttpServerVerticle extends AbstractVerticle {
     }
 
     private void deleteUser(RoutingContext routingContext) {
-        removeUserService.deleteUser(routingContext.request().getParam("phone"), routingContext);
+        String phone = routingContext.request().getParam("phone");
+        String sanitizedPhone = sanitizeParam(phone);
+        removeUserService.deleteUser(sanitizedPhone, routingContext);
+    }
+
+    private String sanitizeParam(String param) {
+        return param.replaceAll("[\n\r\t]", "_");
     }
 }
 
