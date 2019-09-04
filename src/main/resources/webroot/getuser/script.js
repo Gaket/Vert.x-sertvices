@@ -67,7 +67,7 @@ function addUser(user, users) {
         return response;
       }
     })
-    .then(response => response.json())
+    .then(response => response.json())Í
     .then(data => {
       console.log(`User arrived: ${data}`);
       users.unshift(data);
