@@ -72,7 +72,7 @@ test {
 }
 
 run {
-  args = ['run', mainVerticleName, "--launcher-class=$mainClassName", "-conf config/my-application-conf.json", "--redeploy=$watchForChange", "--on-redeploy=$doOnChange"]
+  args = ['run', mainVerticleName, "-instances 2", "--launcher-class=$mainClassName", "-conf config/my-application-conf.json", "--redeploy=$watchForChange", "--on-redeploy=$doOnChange"]
 }
 
 
