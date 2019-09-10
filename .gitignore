@@ -18,3 +18,4 @@ newrelic/logs/
 /config/my-application-conf.json
 /config/vertx-users.properties
 /logs/vertx.log
+/logs/vertx.log.lck
