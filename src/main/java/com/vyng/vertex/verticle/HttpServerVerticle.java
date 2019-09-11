@@ -197,18 +197,21 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     private MongoClient initMongoClient() {
         String uri = Utils.getParam("MONGODB_URI");
+        LOGGER.fine("Initializing Mongo client. Uri found: " + !uri.isEmpty());
         JsonObject mongoconfig = new JsonObject().put("connection_string", uri);
         return MongoClient.createShared(vertx, mongoconfig);
     }
 
     private MongoClient initHerokuMongoClient() {
         String uri = Utils.getParam("MONGO_DB_HEROKU");
+        LOGGER.fine("Initializing Mongo Heroku client. Uri found: " + !uri.isEmpty());
         JsonObject mongoconfig = new JsonObject().put("connection_string", uri);
         return MongoClient.createShared(vertx, mongoconfig, HEROKU_DATA_SOURCE);
     }
 
     private RedisClient initRedisClient() {
         URI redis = URI.create(Utils.getParam("REDISCLOUD_URL"));
+        LOGGER.fine("Initializing Redis client. Uri found: " + !redis.getHost().isEmpty());
         RedisOptions redisOptions = new RedisOptions()
                 .setAuth(redis.getUserInfo().split(":", 2)[1])
                 .setHost(redis.getHost())

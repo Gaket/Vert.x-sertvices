@@ -32,12 +32,14 @@ public class RemoveUserService {
                 .setHandler(asyncresult -> {
                     if (asyncresult.failed()) {
                         Errors.error(routingContext, 400, asyncresult.cause());
+                        LOGGER.warning("Couldn't get result from Mongo");
                         return;
                     }
 
                     if (asyncresult.result() == null || asyncresult.result().isEmpty()) {
                         String errorMsg = "Tried to remove a non-whitelisted number: " + phone;
                         Errors.error(routingContext, 403, errorMsg);
+                        LOGGER.warning(errorMsg);
                         return;
                     }
                     removeUserThroughApi(phone, routingContext);
