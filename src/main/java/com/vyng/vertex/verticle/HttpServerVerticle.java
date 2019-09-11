@@ -139,7 +139,8 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     private void checkAuth(RoutingContext rc, String authority) {
         if (rc.user() == null) {
-            rc.fail(401);
+            LOGGER.info("Unauthenticated request to: " + rc.request().path());
+            rc.response().setStatusCode(401).end("Please, login");
             return;
         }
         rc.user().isAuthorized(authority, authResult -> {
@@ -147,9 +148,11 @@ public class HttpServerVerticle extends AbstractVerticle {
                 if (authResult.result()) {
                     rc.next();
                 } else {
-                    rc.fail(403);
+                    LOGGER.warning("Unauthorized request to: " + rc.request().path() + " from user: " + rc.user());
+                    rc.response().setStatusCode(403).end("Unauthorized");
                 }
             } else {
+                LOGGER.warning("Auth check failure: " + rc.request().path() + " from user: " + rc.user());
                 rc.fail(authResult.cause());
             }
         });
