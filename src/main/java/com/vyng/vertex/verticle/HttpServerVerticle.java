@@ -97,10 +97,10 @@ public class HttpServerVerticle extends AbstractVerticle {
         // This one shows that authentication required to access the page
         router.get("/userinfo")
                 .handler(RedirectAuthHandler.create(authProvider, "/login/"))
-                .handler(StaticHandler.create("webroot/getuser").setCachingEnabled(false));
+                .handler(StaticHandler.create("webroot/getuser").setCachingEnabled(false).setCachingEnabled(false));
         router.get("/removeuser")
                 .handler(RedirectAuthHandler.create(authProvider, "/login/"))
-                .handler(StaticHandler.create("webroot/removeuser").setCachingEnabled(false));
+                .handler(StaticHandler.create("webroot/removeuser").setCachingEnabled(false).setCachingEnabled(false));
         router.get("/static/*").handler(StaticHandler.create());
         router.get("/").handler(StaticHandler.create("webroot/main"));
 

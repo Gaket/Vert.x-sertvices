@@ -74,13 +74,16 @@ function addUser(user, users) {
       displayUsers();
     })
     .catch(displayError)
-    .finally(() => searchInput.disabledÍ = false);
+    .finally(() => {
+      console.log(`Unblocking the input field`)
+      searchInput.disabled = false;
+    });
 }
 
 searchInput.onkeypress = function (e) {
   if (!e) e = window.event;
   var keyCode = e.keyCode || e.which;
-  if (keyCode === '13') {
+  if (keyCode === 13) {
     searchInput.disabled = true;
     displayLoading();
     addUser(this.value, users);
