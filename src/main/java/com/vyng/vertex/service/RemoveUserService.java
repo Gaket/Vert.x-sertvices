@@ -49,16 +49,6 @@ public class RemoveUserService {
 //                });
     }
 
-                    if (asyncresult.result() == null || asyncresult.result().isEmpty()) {
-                        String errorMsg = "Tried to remove a non-whitelisted number: " + phone;
-                        Errors.error(routingContext, 403, errorMsg);
-                        LOGGER.warning(errorMsg);
-                        return;
-                    }
-                    removeUserThroughApi(phone, routingContext);
-                });
-    }
-
     private void removeUserThroughApi(String phone, String server, RoutingContext routingContext) {
         OkHttpClient client = new OkHttpClient();
         String endpoint = "prod".equals(server) ? REMOVE_USER_PROD_ENDPOINT : REMOVE_USER_DEV_ENDPOINT;
@@ -86,7 +76,7 @@ public class RemoveUserService {
     }
 
     private Future<JsonObject> allowedToDelete(String phone) {
-        Promise<JsonObject>  result = Promise.promise();
+        Promise<JsonObject> result = Promise.promise();
         mongoClient.findOne("phones_to_delete", new JsonObject().put("phone", phone), null, result);
         return result.future();
     }
