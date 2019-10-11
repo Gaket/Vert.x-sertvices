@@ -28,23 +28,25 @@ public class RemoveUserService {
     // That was a bad experiment, don't do it in prod. GetUserInfoService has better example with Futures
     public void deleteUser(String phone, String server, RoutingContext routingContext) {
         LOGGER.info("Deleting a user: " + phone + " on a server: " + server);
+        removeUserThroughApi(phone, server, routingContext);
 
-        allowedToDelete(phone)
-                .setHandler(asyncresult -> {
-                    if (asyncresult.failed()) {
-                        Errors.error(routingContext, 400, asyncresult.cause());
-                        LOGGER.warning("Couldn't get result from Mongo");
-                        return;
-                    }
-
-                    if (asyncresult.result() == null || asyncresult.result().isEmpty()) {
-                        String errorMsg = "Tried to remove a non-whitelisted number: " + phone;
-                        Errors.error(routingContext, 403, errorMsg);
-                        LOGGER.warning(errorMsg);
-                        return;
-                    }
-                    removeUserThroughApi(phone, server, routingContext);
-                });
+        // TODO: Remove the check for user testing. Return it back afterwards
+//        allowedToDelete(phone)
+//                .setHandler(asyncresult -> {
+//                    if (asyncresult.failed()) {
+//                        Errors.error(routingContext, 400, asyncresult.cause());
+//                        LOGGER.warning("Couldn't get result from Mongo");
+//                        return;
+//                    }
+//
+//                    if (asyncresult.result() == null || asyncresult.result().isEmpty()) {
+//                        String errorMsg = "Tried to remove a non-whitelisted number: " + phone;
+//                        Errors.error(routingContext, 403, errorMsg);
+//                        LOGGER.warning(errorMsg);
+//                        return;
+//                    }
+//                    removeUserThroughApi(phone, server, routingContext);
+//                });
     }
 
     private void removeUserThroughApi(String phone, String server, RoutingContext routingContext) {
