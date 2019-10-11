@@ -14,7 +14,8 @@ import java.io.IOException;
 public class RemoveUserService {
 
     private final static java.util.logging.Logger LOGGER = java.util.logging.Logger.getLogger("VertxHttpServer");
-    private static final String REMOVE_USER_ENDPOINT = Utils.getParam("REMOVE_USER_ENDPOINT");
+    private static final String REMOVE_USER_DEV_ENDPOINT = Utils.getParam("REMOVE_USER_DEV_ENDPOINT");
+    private static final String REMOVE_USER_PROD_ENDPOINT = Utils.getParam("REMOVE_USER_PROD_ENDPOINT");
     private static final String DELETE_TOKEN_ENV = "DELETE_TOKEN";
 
     private final MongoClient mongoClient;
@@ -25,8 +26,8 @@ public class RemoveUserService {
 
     // This is the first type of serving routing, that passes routingContext inside.
     // That was a bad experiment, don't do it in prod. GetUserInfoService has better example with Futures
-    public void deleteUser(String phone, RoutingContext routingContext) {
-        LOGGER.info("Deleting a user: " + phone);
+    public void deleteUser(String phone, String server, RoutingContext routingContext) {
+        LOGGER.info("Deleting a user: " + phone + " on a server: " + server);
 
         allowedToDelete(phone)
                 .setHandler(asyncresult -> {
@@ -42,13 +43,14 @@ public class RemoveUserService {
                         LOGGER.warning(errorMsg);
                         return;
                     }
-                    removeUserThroughApi(phone, routingContext);
+                    removeUserThroughApi(phone, server, routingContext);
                 });
     }
 
-    private void removeUserThroughApi(String phone, RoutingContext routingContext) {
+    private void removeUserThroughApi(String phone, String server, RoutingContext routingContext) {
         OkHttpClient client = new OkHttpClient();
-        Request request = new Request.Builder().url(REMOVE_USER_ENDPOINT + phone)
+        String endpoint = "prod".equals(server) ? REMOVE_USER_PROD_ENDPOINT : REMOVE_USER_DEV_ENDPOINT;
+        Request request = new Request.Builder().url(endpoint + phone)
                 .addHeader("x-auth-token", Utils.getParam(DELETE_TOKEN_ENV)).delete().build();
         client.newCall(request).enqueue(new Callback() {
 

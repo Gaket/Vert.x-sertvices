@@ -279,7 +279,8 @@ public class HttpServerVerticle extends AbstractVerticle {
     private void deleteUser(RoutingContext routingContext) {
         String phone = routingContext.request().getParam("phone");
         String sanitizedPhone = sanitizeParam(phone);
-        removeUserService.deleteUser(sanitizedPhone, routingContext);
+        String server = routingContext.request().getParam("server");
+        removeUserService.deleteUser(sanitizedPhone, server, routingContext);
     }
 
     private String sanitizeParam(String param) {

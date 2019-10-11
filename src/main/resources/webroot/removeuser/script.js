@@ -1,5 +1,6 @@
 const searchInput = document.querySelector('.search');
-const deleteButton = document.querySelector('.btn');
+const deleteDevButton = document.querySelector('#dev');
+const deleteProdButton = document.querySelector('#prod');
 const toast = document.querySelector('.toast');
 
 function hideToast() {
@@ -33,27 +34,30 @@ function displayStatus(status) {
   }
 }
 
-function removeNumber() {
+function removeNumber(server) {
 
-  if (deleteButton.disabled) {
+  if (deleteDevButton.disabled) {
     return;
   }
 
-  deleteButton.disabled = true;
+  deleteDevButton.disabled = true;
+  deleteProdButton.disabled = true;
   searchInput.disabled = true;
 
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function () {
     if (this.readyState == 4) {
       displayStatus(this.status);
-      deleteButton.disabled = false;
+      deleteDevButton.disabled = false;
+      deleteProdButton.disabled = false;
       searchInput.disabled = false;
       searchInput.value = "";
     }
   }
 
   const number = "+" + searchInput.value.replace(/\D/g,'');
-  xhttp.open("DELETE", "/users/phone/" + number, true);
+  const params = server ? "server=" + server : "";
+  xhttp.open("DELETE", "/users/phone/" + number +"?" + params, true);
   xhttp.send();
 }
 
@@ -65,4 +69,5 @@ searchInput.onkeypress = function (e) {
   }
 }
 
-deleteButton.onclick = function () { removeNumber() };
+deleteDevButton.onclick = function () { removeNumber() };
+deleteProdButton.onclick = function () { removeNumber('prod') };
