@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.logging.Logger;
 
 public class GetUserVideoService {
-    private static final Logger LOGGER = java.util.logging.Logger.getLogger("GetUserVideoService");
+    private static final Logger LOGGER = Logger.getLogger("GetUserVideoService");
 
 
     private static final int MAX_USER_REQUESTS = Integer.parseInt(Utils.getParam("MAX_USER_REQUESTS"));
