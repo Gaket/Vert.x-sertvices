@@ -75,7 +75,7 @@ public class GetUserVideoService {
         if (entry == null) {
             throw new NotFoundException("Object with the id was not found: " + id);
         }
-        String id1 = entry.getString("phoneNumber");
+        String id1 =entry.getJsonObject("_id").getString("$oid");
         entry.put("_id", id1);
         String createdAt = entry.getJsonObject("createdAt").getString("$date");
         entry.put("createdAt", createdAt);
