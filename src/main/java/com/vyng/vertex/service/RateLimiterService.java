@@ -2,7 +2,6 @@ package com.vyng.vertex.service;
 
 import com.mongodb.lang.NonNull;
 import com.vyng.vertex.error.QueryLimitReachedException;
-import com.vyng.vertex.utils.Utils;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.redis.RedisClient;
@@ -29,6 +28,7 @@ public class RateLimiterService {
             }
             if (count > maxRequests) {
                 throw new QueryLimitReachedException(error);
+
             }
             return true;
         });

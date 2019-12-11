@@ -2,7 +2,6 @@ package com.vyng.vertex.service;
 
 import com.mongodb.lang.NonNull;
 import com.vyng.vertex.error.NotFoundException;
-import com.vyng.vertex.error.QueryLimitReachedException;
 import com.vyng.vertex.utils.Utils;
 import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
@@ -12,9 +11,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.ext.mongo.MongoClient;
 import io.vertx.redis.RedisClient;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class GetUserVideoService {
@@ -44,11 +40,11 @@ public class GetUserVideoService {
         LOGGER.info("Getting user info for: " + phoneNumber);
 
         // Add rate limit on total queries to the get user resource
-        io.vertx.core.Future<Boolean> totalSuccess =
+        Future<Boolean> totalSuccess =
         rateLimiterService.getTotalRequestLimitFuture(KEY_GET_TOTAL_COUNT, MAX_TOTAL_REQUESTS, "Max daily total info request count reached");
 
         // Add rate limit on queries to the get user resource from one ip
-        io.vertx.core.Future<Boolean> userSuccess =
+        Future<Boolean> userSuccess =
                 rateLimiterService.getTotalRequestLimitFuture(KEY_GET_USER_COUNT + remoteIp, MAX_USER_REQUESTS, "Max daily user info request count reached");
 
         return CompositeFuture.all(totalSuccess, userSuccess)
@@ -57,7 +53,7 @@ public class GetUserVideoService {
 
 
 
-    private io.vertx.core.Future<JsonObject> getUserVideosByPhoneNumber(String id) {
+    private Future<JsonObject> getUserVideosByPhoneNumber(String id) {
         Promise<JsonObject> mongoPromise = Promise.promise();
         JsonArray criteriaArray=new JsonArray();
         JsonObject phoneCriteria=new JsonObject().put("phoneNumber",id);
