@@ -64,7 +64,7 @@ public class HttpServerVerticle extends AbstractVerticle {
     private void initServices(MongoClient mongoClient, MongoClient herokuMongoClient, RedisClient redisClient) {
         getUserInfoService = new GetUserInfoService(mongoClient, redisClient);
         removeUserService = new RemoveUserService(herokuMongoClient);
-        getUserVideoService=new GetUserVideoService(mongoClient,redisClient);
+        getUserVideoService = new GetUserVideoService(mongoClient, redisClient);
     }
 
     @NotNull
@@ -104,14 +104,14 @@ public class HttpServerVerticle extends AbstractVerticle {
         // This one shows that authentication required to access the page
         router.get("/userinfo")
                 .handler(RedirectAuthHandler.create(authProvider, "/login/"))
-                .handler(StaticHandler.create("webroot/getuser").setCachingEnabled(false).setCachingEnabled(false));
+                .handler(StaticHandler.create("webroot/getuser").setCachingEnabled(false));
         router.get("/removeuser")
                 .handler(RedirectAuthHandler.create(authProvider, "/login/"))
-                .handler(StaticHandler.create("webroot/removeuser").setCachingEnabled(false).setCachingEnabled(false));
+                .handler(StaticHandler.create("webroot/removeuser").setCachingEnabled(false));
 
         router.get("/uservideos")
                 .handler(RedirectAuthHandler.create(authProvider, "/login/"))
-                .handler(StaticHandler.create("webroot/getuservideos").setCachingEnabled(false).setCachingEnabled(false));
+                .handler(StaticHandler.create("webroot/getuservideos").setCachingEnabled(false));
 
         router.get("/static/*").handler(StaticHandler.create());
         router.get("/").handler(StaticHandler.create("webroot/main"));
@@ -297,7 +297,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     private void getUserVideos(RoutingContext rc) {
         final String id = rc.request().getParam("phone");
-        final String sanitizedId =id;
+        final String sanitizedId = id;
         final String remoteIp = rc.request().remoteAddress().host();
         Future<JsonObject> promise = getUserVideoService.getUserVideos(sanitizedId, remoteIp);
 
