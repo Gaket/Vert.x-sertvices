@@ -3,6 +3,7 @@ package com.vyng.vertex.verticle;
 import com.vyng.vertex.error.NotFoundException;
 import com.vyng.vertex.error.QueryLimitReachedException;
 import com.vyng.vertex.service.GetUserInfoService;
+import com.vyng.vertex.service.GetUserVideoService;
 import com.vyng.vertex.service.RemoveUserService;
 import com.vyng.vertex.utils.Utils;
 import io.vertx.core.AbstractVerticle;
@@ -42,6 +43,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     private RemoveUserService removeUserService;
     private GetUserInfoService getUserInfoService;
+    private GetUserVideoService getUserVideoService;
 
     public static void main(final String[] args) {
         Launcher.executeCommand("run", HttpServerVerticle.class.getName(),
@@ -62,6 +64,7 @@ public class HttpServerVerticle extends AbstractVerticle {
     private void initServices(MongoClient mongoClient, MongoClient herokuMongoClient, RedisClient redisClient) {
         getUserInfoService = new GetUserInfoService(mongoClient, redisClient);
         removeUserService = new RemoveUserService(herokuMongoClient);
+        getUserVideoService = new GetUserVideoService(mongoClient, redisClient);
     }
 
     @NotNull
@@ -75,6 +78,10 @@ public class HttpServerVerticle extends AbstractVerticle {
         router.route("/users/:id/info")
                 .handler(rc -> checkAuth(rc, "get_info"))
                 .handler(this::getUser);
+
+        router.route("/users/:phone/videos")
+                .handler(rc -> checkAuth(rc, "get_info"))
+                .handler(this::getUserVideos);
 
         // We need to manually handle 401 here, otherwise, an error on trying to redirect DELETE method happens
         router.delete("/users/phone/:phone")
@@ -97,10 +104,15 @@ public class HttpServerVerticle extends AbstractVerticle {
         // This one shows that authentication required to access the page
         router.get("/userinfo")
                 .handler(RedirectAuthHandler.create(authProvider, "/login/"))
-                .handler(StaticHandler.create("webroot/getuser").setCachingEnabled(false).setCachingEnabled(false));
+                .handler(StaticHandler.create("webroot/getuser").setCachingEnabled(false));
         router.get("/removeuser")
                 .handler(RedirectAuthHandler.create(authProvider, "/login/"))
-                .handler(StaticHandler.create("webroot/removeuser").setCachingEnabled(false).setCachingEnabled(false));
+                .handler(StaticHandler.create("webroot/removeuser").setCachingEnabled(false));
+
+        router.get("/uservideos")
+                .handler(RedirectAuthHandler.create(authProvider, "/login/"))
+                .handler(StaticHandler.create("webroot/getuservideos").setCachingEnabled(false));
+
         router.get("/static/*").handler(StaticHandler.create());
         router.get("/").handler(StaticHandler.create("webroot/main"));
 
@@ -282,6 +294,39 @@ public class HttpServerVerticle extends AbstractVerticle {
         String server = routingContext.request().getParam("server");
         removeUserService.deleteUser(sanitizedPhone, server, routingContext);
     }
+
+    private void getUserVideos(RoutingContext rc) {
+        final String id = rc.request().getParam("phone");
+        final String sanitizedId = id;
+        final String remoteIp = rc.request().remoteAddress().host();
+        Future<JsonObject> promise = getUserVideoService.getUserVideos(sanitizedId, remoteIp);
+
+        promise.setHandler(ar -> {
+            if (ar.succeeded()) {
+                LOGGER.info("Get videos of the user: " + sanitizedId);
+                rc.response().setStatusCode(200)
+                        .putHeader("content-type", "application/json; charset=utf-8")
+                        .end(Json.encodePrettily(ar.result()));
+            } else {
+                LOGGER.warning("Can't get videos about the user: " + ar.toString());
+                if (ar.cause() instanceof QueryLimitReachedException) {
+                    rc.response().setStatusCode(429)
+                            .putHeader("content-type", "text/plain; charset=utf-8")
+                            .end(ar.cause().getMessage());
+                } else if (ar.cause() instanceof NotFoundException) {
+                    rc.response().setStatusCode(404)
+                            .putHeader("content-type", "text/plain; charset=utf-8")
+                            .end(ar.cause().getMessage());
+                } else {
+                    String message = ar.cause() != null && ar.cause().getMessage() != null ? ar.cause().getMessage() : ar.cause().toString();
+                    rc.response().setStatusCode(400)
+                            .putHeader("content-type", "text/plain; charset=utf-8")
+                            .end(message);
+                }
+            }
+        });
+    }
+
 
     private String sanitizeParam(String param) {
         return param.replaceAll("[\n\r\t]", "_");

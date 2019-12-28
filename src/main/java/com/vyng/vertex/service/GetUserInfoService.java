@@ -18,7 +18,6 @@ import java.util.logging.Logger;
 public class GetUserInfoService {
 
     private static final Logger LOGGER = java.util.logging.Logger.getLogger("GetUserInfoService");
-
     private static final int MAX_USER_REQUESTS = Integer.parseInt(Utils.getParam("MAX_USER_REQUESTS"));
     private static final int MAX_TOTAL_REQUESTS = Integer.parseInt(Utils.getParam("MAX_TOTAL_REQUESTS"));
     private static final int MONGO_ID_LENGTH = 24;
@@ -31,24 +30,27 @@ public class GetUserInfoService {
     @NonNull
     private final RedisClient redisClient;
 
+    private RateLimiterService rateLimiterService;
+
     public GetUserInfoService(MongoClient mongoClient, RedisClient redisClient) {
         this.mongoClient = mongoClient;
         this.redisClient = redisClient;
+        this.rateLimiterService=new RateLimiterService(redisClient);
     }
 
     public Future<JsonObject> getUserInfo(String id, String remoteIp) {
+
+
         LOGGER.info("Getting user info for: " + id);
         if (id.length() != MONGO_ID_LENGTH) {
             return Future.failedFuture("Unexpected id length");
         }
 
         // Add rate limit on total queries to the get user resource
-        Future<Boolean> totalSuccess =
-                getTotalRequestLimitFuture(KEY_GET_TOTAL_COUNT, MAX_TOTAL_REQUESTS, "Max daily total info request count reached");
+        Future<Boolean> totalSuccess = rateLimiterService.getTotalRequestLimitFuture(KEY_GET_TOTAL_COUNT, MAX_TOTAL_REQUESTS, "Max daily total info request count reached");
 
         // Add rate limit on queries to the get user resource from one ip
-        Future<Boolean> userSuccess =
-                getTotalRequestLimitFuture(KEY_GET_USER_COUNT + remoteIp, MAX_USER_REQUESTS, "Max daily user info request count reached");
+        Future<Boolean> userSuccess = rateLimiterService.getTotalRequestLimitFuture(KEY_GET_USER_COUNT + remoteIp, MAX_USER_REQUESTS, "Max daily user info request count reached");
 
         return CompositeFuture.all(totalSuccess, userSuccess)
                 .compose(__ -> getUserById(id))
@@ -76,18 +78,5 @@ public class GetUserInfoService {
         return mongoPromise.future();
     }
 
-    private Future<Boolean> getTotalRequestLimitFuture(String key, int maxRequests, String error) {
-        Promise<Long> incrementedCount = Promise.promise();
-        redisClient.incr(key, incrementedCount);
-        return incrementedCount.future().map(count -> {
-            if (count == 1) {
-                redisClient.expire(key, LIMITATION_TIME, __ -> {
-                });
-            }
-            if (count > maxRequests) {
-                throw new QueryLimitReachedException(error);
-            }
-            return true;
-        });
-    }
+
 }
